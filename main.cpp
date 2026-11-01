@@ -69,6 +69,10 @@ int main()
     }
 
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     Shader lightingShader("shader.vs", "shader.fs");
     Shader lightCubeShader("light_cube.vs", "light_cube.fs");
@@ -189,7 +193,7 @@ int main()
         processInput(window);
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
@@ -197,6 +201,8 @@ int main()
         glBindTexture(GL_TEXTURE_2D, specularMap);
         
         lightingShader.use();
+        lightingShader.setBool("drawSingleColor", false);
+
         lightingShader.setVec3("light.position", lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(glGetUniformLocation(lightingShader.ID, "viewPos"), camera.Position.x, camera.Position.y, camera.Position.z);
 
@@ -227,8 +233,8 @@ int main()
         lightingShader.setVec3("spotLight.direction", camera.Front.x, camera.Front.y, camera.Front.z);
 
         lightingShader.setVec3("spotLight.ambient", 0.05f, 0.05f, 0.05f);
-        lightingShader.setVec3("spotLight.diffuse", 0.8f, 0.8f, 0.8f);
-        lightingShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+        lightingShader.setVec3("spotLight.diffuse", 0.0f, 0.0f, 0.0f);
+        lightingShader.setVec3("spotLight.specular", 0.0f, 0.0f, 0.0f);
 
         lightingShader.setFloat("spotLight.constant", 1.0f);
         lightingShader.setFloat("spotLight.linear", 0.09f);
@@ -251,9 +257,31 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+
         glBindVertexArray(cubeVAO);
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+
+        lightingShader.use();
+        lightingShader.setBool("drawSingleColor", true);
+        lightingShader.setVec3("singleColor", 0.0f, 0.5f, 0.0f);
+
+        glm::mat4 outlineModel = glm::mat4(1.0f);
+        outlineModel = glm::rotate(outlineModel, (float)glfwGetTime() * glm::radians(25.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        outlineModel = glm::scale(outlineModel, glm::vec3(1.04f, 1.04f, 1.04f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(outlineModel));
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        glEnable(GL_DEPTH_TEST);
 
         lightCubeShader.use();
 
@@ -336,7 +364,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 void processInput(GLFWwindow *window)
 {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+        glfwSetWindowShouldClose(window, true); 
     
     if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);

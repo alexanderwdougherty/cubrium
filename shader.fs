@@ -58,12 +58,20 @@ uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 
+uniform bool drawSingleColor;
+uniform vec3 singleColor;
+
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 diffTex, vec3 specTex);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 FragPos, vec3 viewDir, vec3 diffTex, vec3 specTex);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 FragPos, vec3 viewDir, vec3 diffTex, vec3 specTex);
 
 void main()
 {
+    if (drawSingleColor)
+    {
+        FragColor = vec4(singleColor, 1.0f);
+        return;
+    }
     vec3 diffTex = vec3(texture(material.diffuse, TexCoord));
     vec3 specTex = vec3(texture(material.specular, TexCoord));
 
@@ -129,8 +137,8 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 FragPos, vec3 viewDir, vec
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
 
     vec3 ambient = light.ambient * diffTex * material.ambient * attentuation;
-    vec3 diffuse = light.diffuse * diff * diffTex * attentuation;
-    vec3 specular = light.specular * spec * specTex * attentuation;
+    vec3 diffuse = light.diffuse * diff * diffTex * attentuation * intensity;
+    vec3 specular = light.specular * spec * specTex * attentuation * intensity;
 
     return (ambient + diffuse + specular);
 }
