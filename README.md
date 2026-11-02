@@ -1,5 +1,5 @@
 # Learning OpenGL
-This project depicts my journey learning OpenGL, hopefully turning it into a fully functional game.
+This project depicts my journey learning OpenGL, heavily based on the [LearnOpenGL](https://learnopengl.com/) course by Joey de Vries. I will hopefully turning this project into a fully functional voxel-based sandbox as time progresses.
 
 ---
 
