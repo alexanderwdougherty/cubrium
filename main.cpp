@@ -17,6 +17,9 @@
 # include <iostream>
 # include <cmath>
 
+# include <map>
+# include <vector>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -74,11 +77,14 @@ int main()
     glEnable(GL_STENCIL_TEST);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     Shader lightingShader("shader.vs", "shader.fs");
     Shader lightCubeShader("light_cube.vs", "light_cube.fs");
 
     // (X, Y, Z, R, G, B, S, T)
-        float vertices[] = {
+    float vertices[] = {
         // Back
         -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
@@ -128,6 +134,16 @@ int main()
         -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,       0.0f, 1.0f
     };
 
+    float transparentVertices[] = {
+        0.0f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
+        0.0f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
+        1.0f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
+
+        0.0f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
+        1.0f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
+        1.0f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      1.0f, 1.0f
+    };
+
     /*
     unsigned int indices[] = {
         0, 1, 2,    2, 3, 0, // Front
@@ -144,6 +160,13 @@ int main()
         glm::vec3(2.3f, -3.3f, -4.0f),
         glm::vec3(-4.0f, 2.0f, -12.0f),
         glm::vec3(0.0f, 0.0f, -3.0f)
+    };
+
+    glm::vec3 windowPositions[] = {
+        glm::vec3(1.5f, 0.0f, 0.5f),
+        glm::vec3(0.0f, 0.0f, 1.7f),
+        glm::vec3(-0.5f, 0.0f, -2.3f),
+        glm::vec3(0.5f, 0.0f, -0.6f)
     };
 
     unsigned int VBO, cubeVAO, EBO;
@@ -177,8 +200,23 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     unsigned int diffuseMap = loadTexture("assets/pepe.jpg"),
-    specularMap = loadTexture("assets/pepe_specular.png");
+    specularMap = loadTexture("assets/pepe_specular.png"),
+    windowTexture = loadTexture("assets/window.png");
 
     lightingShader.use();
     lightingShader.setInt("material.diffuse", 0);
@@ -298,7 +336,7 @@ int main()
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
         glBindVertexArray(lightCubeVAO);
-        for (unsigned int i = 0; i < 4; i++) {
+        for (unsigned int i = 0; i < sizeof(pointLightPositions) / sizeof(pointLightPositions[0]); i++) {
             model = glm::mat4(1.0f);
             model = glm::translate(model, pointLightPositions[i]);
             model = glm::scale(model, glm::vec3(0.2f));
@@ -306,6 +344,34 @@ int main()
             // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glUniformMatrix4fv(glGetUniformLocation(lightCubeShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
             glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+
+        std::map<float, glm::vec3> sortedWindows;
+        for(unsigned int i = 0; i < sizeof(windowPositions) / sizeof(windowPositions[0]) ; i++)
+        {
+            float dist = glm::length(camera.Position - windowPositions[i]);
+            sortedWindows[dist] = windowPositions[i];
+        }
+
+        lightingShader.use();
+        lightingShader.setBool("drawSingleColor", false);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, windowTexture);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glBindVertexArray(transparentVAO);
+
+        unsigned int windowModelLoc = glGetUniformLocation(lightingShader.ID, "model");
+
+        for(std::map<float, glm::vec3>::reverse_iterator it = sortedWindows.rbegin(); it != sortedWindows.rend(); ++it)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, it -> second);
+            glUniformMatrix4fv(windowModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glDrawArrays(GL_TRIANGLES, 0, 6);
         }
 
         glfwSwapBuffers(window);
@@ -342,8 +408,8 @@ unsigned int loadTexture(char const * path)
         glTexImage2D(GL_TEXTURE_2D, 0, imageFormat, width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }

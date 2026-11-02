@@ -72,7 +72,13 @@ void main()
         FragColor = vec4(singleColor, 1.0f);
         return;
     }
-    vec3 diffTex = vec3(texture(material.diffuse, TexCoord));
+
+    vec4 texColor = texture(material.diffuse, TexCoord);
+
+    if(texColor.a < 0.1)
+        discard;
+    
+    vec3 diffTex = vec3(texColor);
     vec3 specTex = vec3(texture(material.specular, TexCoord));
 
     vec3 norm = normalize(Normal);
@@ -85,7 +91,7 @@ void main()
 
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir, diffTex, specTex);
 
-    FragColor = vec4(result, 1.0f);
+    FragColor = vec4(result, texColor.a);
 }
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 diffTex, vec3 specTex)
