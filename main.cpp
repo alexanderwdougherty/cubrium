@@ -80,24 +80,28 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
     Shader lightingShader("shader.vs", "shader.fs");
     Shader lightCubeShader("light_cube.vs", "light_cube.fs");
 
-    // (X, Y, Z, R, G, B, S, T)
+    // X, Y, Z, NX, NY, NZ, S, T
     float vertices[] = {
         // Back
         -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,     0.0f, 0.0f, -1.0f,      1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,     0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,     0.0f, 0.0f, -1.0f,      1.0f, 1.0f,
         -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
 
         // Front
         -0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,       0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,       1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,    0.0f, 0.0f, 1.0f,       1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,    0.0f, 0.0f, 1.0f,       1.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,     0.0f, 0.0f, 1.0f,       1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,     0.0f, 0.0f, 1.0f,       1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,     0.0f, 0.0f, 1.0f,       1.0f, 1.0f,
         -0.5f,  0.5f,  0.5f,    0.0f, 0.0f, 1.0f,       0.0f, 1.0f,
         -0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,       0.0f, 0.0f,
 
@@ -110,38 +114,39 @@ int main()
         -0.5f,  0.5f,  0.5f,    -1.0f, 0.0f, 0.0f,      1.0f, 0.0f,
 
         // Right
-         0.5f,  0.5f,  0.5f,    1.0f, 0.0f, 0.0f,       1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 0.0f, 0.0f,       1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,       0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,       0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 0.0f,       0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,    1.0f, 0.0f, 0.0f,       1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,     1.0f, 0.0f, 0.0f,       1.0f, 0.0f,
+        0.5f, -0.5f, -0.5f,     1.0f, 0.0f, 0.0f,       0.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,     1.0f, 0.0f, 0.0f,       1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,     1.0f, 0.0f, 0.0f,       0.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,     1.0f, 0.0f, 0.0f,       1.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,     1.0f, 0.0f, 0.0f,       0.0f, 0.0f,
 
         // Bottom
         -0.5f, -0.5f, -0.5f,    0.0f, -1.0f, 0.0f,      0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,    0.0f, -1.0f, 0.0f,      1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,    0.0f, -1.0f, 0.0f,      1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,    0.0f, -1.0f, 0.0f,      1.0f, 0.0f,
+        0.5f, -0.5f, -0.5f,     0.0f, -1.0f, 0.0f,      1.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,     0.0f, -1.0f, 0.0f,      1.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,     0.0f, -1.0f, 0.0f,      1.0f, 0.0f,
         -0.5f, -0.5f,  0.5f,    0.0f, -1.0f, 0.0f,      0.0f, 0.0f,
         -0.5f, -0.5f, -0.5f,    0.0f, -1.0f, 0.0f,      0.0f, 1.0f,
 
         // Top
-        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,       0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,       1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 0.0f,       1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 0.0f,       1.0f, 0.0f,
+        -0.5f, 0.5f, -0.5f,     0.0f, 1.0f, 0.0f,       0.0f, 1.0f,
         -0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 0.0f,       0.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,     0.0f, 1.0f, 0.0f,       1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,     0.0f, 1.0f, 0.0f,       1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,     0.0f, 1.0f, 0.0f,       1.0f, 1.0f,
         -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,       0.0f, 1.0f
     };
 
+    // X, Y, Z, NX, NY, NZ, S, T
     float transparentVertices[] = {
-        0.0f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
-        0.0f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
-        1.0f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
+        -0.5f, 0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
+        -0.5f, -0.5f, 0.0f,     0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
+        0.5f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
 
-        0.0f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
-        1.0f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
-        1.0f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      1.0f, 1.0f
+        -0.5f, 0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
+        0.5f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
+        0.5f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      1.0f, 1.0f
     };
 
     /*
@@ -353,6 +358,8 @@ int main()
             sortedWindows[dist] = windowPositions[i];
         }
 
+        glDisable(GL_CULL_FACE);
+
         lightingShader.use();
         lightingShader.setBool("drawSingleColor", false);
 
@@ -370,9 +377,13 @@ int main()
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, it -> second);
+
+            // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glUniformMatrix4fv(windowModelLoc, 1, GL_FALSE, glm::value_ptr(model));
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
+
+        glEnable(GL_CULL_FACE);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
