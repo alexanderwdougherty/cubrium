@@ -8,7 +8,7 @@ This project depicts my journey learning OpenGL, hopefully turning it into a ful
 2. Open the terminal and extract the downloaded `.zip` file:
 
     ```bash
-    unzip opengl-learn-v0.0.1-linux.zip -d opengl-learn
+    unzip opengl-learn-v0.0.2-linux.zip -d opengl-learn
     ```
 3. Navigate to the new folder:
 
