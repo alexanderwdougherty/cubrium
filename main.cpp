@@ -36,6 +36,8 @@ float deltaTime = 0.0f, lastFrame = 0.0f;
 
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
+const int effectMode = 3;
+
 int main()
 {
     if (!glfwInit())
@@ -86,6 +88,7 @@ int main()
 
     Shader lightingShader("shader.vs", "shader.fs");
     Shader lightCubeShader("light_cube.vs", "light_cube.fs");
+    Shader screenShader("screen.vs", "screen.fs");
 
     // X, Y, Z, NX, NY, NZ, S, T
     float vertices[] = {
@@ -149,17 +152,18 @@ int main()
         0.5f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      1.0f, 1.0f
     };
 
-    /*
-    unsigned int indices[] = {
-        0, 1, 2,    2, 3, 0, // Front
-        1, 5, 6,    6, 2, 1, // Right
-        7, 6, 5,    5, 4, 7, // Back
-        4, 0, 3,    3, 7, 4, // Left
-        4, 5, 1,    1, 0, 4, // Bottom
-        3, 2, 6,    6, 7, 3 // Top
-    };
-    */
+    // X, Y, S, T
+    float quadVertices[] = {
+        -1.0f, 1.0f,    0.0f, 1.0f,
+        -1.0f, -1.0f,   0.0f, 0.0f,
+        1.0f, -1.0f,    1.0f, 0.0f,
 
+        -1.0f, 1.0f,    0.0f, 1.0f,
+        1.0f, -1.0f,    1.0f, 0.0f,
+        1.0f, 1.0f,     1.0f, 1.0f
+    };
+
+    // X, Y, Z
     glm::vec3 pointLightPositions[] = {
         glm::vec3(0.7f, 0.2f, 2.0f),
         glm::vec3(2.3f, -3.3f, -4.0f),
@@ -167,20 +171,19 @@ int main()
         glm::vec3(0.0f, 0.0f, -3.0f)
     };
 
+    // X, Y, Z
     glm::vec3 windowPositions[] = {
         glm::vec3(1.5f, 0.0f, 0.5f),
         glm::vec3(0.0f, 0.0f, 1.7f),
         glm::vec3(-0.5f, 0.0f, -2.3f),
-        glm::vec3(0.5f, 0.0f, -0.6f)
+        glm::vec3(1.5f, 0.0f, -0.6f)
     };
 
     unsigned int VBO, cubeVAO, EBO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
-
     glBindVertexArray(cubeVAO);
-
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     
@@ -199,7 +202,6 @@ int main()
     unsigned int lightCubeVAO;
     glGenVertexArrays(1, &lightCubeVAO);
     glBindVertexArray(lightCubeVAO);
-
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -219,13 +221,51 @@ int main()
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
     unsigned int diffuseMap = loadTexture("assets/pepe.jpg"),
     specularMap = loadTexture("assets/pepe_specular.png"),
-    windowTexture = loadTexture("assets/window.png");
+    windowTexture = loadTexture("assets/window.png"),
+    windowSpecular = loadTexture("assets/window_specular.png");
 
     lightingShader.use();
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
+
+    screenShader.use();
+    screenShader.setInt("screenTex", 2);
+
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+    unsigned int textureColorBuffer;
+    glGenTextures(1, &textureColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer Validation failed!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -234,6 +274,10 @@ int main()
         lastFrame = currentFrame;
 
         processInput(window);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -244,6 +288,10 @@ int main()
         glBindTexture(GL_TEXTURE_2D, specularMap);
         
         lightingShader.use();
+
+        lightingShader.setInt("material.diffuse", 0);
+        lightingShader.setInt("material.specular", 1);
+        
         lightingShader.setBool("drawSingleColor", false);
 
         lightingShader.setVec3("light.position", lightPos.x, lightPos.y, lightPos.z);
@@ -367,7 +415,7 @@ int main()
         glBindTexture(GL_TEXTURE_2D, windowTexture);
 
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindTexture(GL_TEXTURE_2D, windowSpecular);
 
         glBindVertexArray(transparentVAO);
 
@@ -385,14 +433,33 @@ int main()
 
         glEnable(GL_CULL_FACE);
 
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        screenShader.use();
+        screenShader.setInt("effectMode", effectMode);
+
+        glBindVertexArray(quadVAO);
+        glActiveTexture(GL_TEXTURE2);
+
+        glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &lightCubeVAO);
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteVertexArrays(1, &framebuffer);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &quadVBO);
 
     glfwTerminate();
     return 0;
