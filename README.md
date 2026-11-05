@@ -3,6 +3,28 @@ This project depicts my journey learning OpenGL, heavily based on the [LearnOpen
 
 ---
 
+## Prerequisites
+Before running the application, verify GLFW is installed.
+
+### Ubuntu/Debian:
+
+```bash
+sudo apt update
+sudo apt instal libglfw3
+ldd main
+```
+### Fedora:
+
+```bash
+sudo dnf install glfw
+ldd main
+```
+### Arch Linux:
+
+```bash
+sudo pacman -S glfw-x11 # or glfw-wayland
+ldd main
+```
 ## Linux (x86_64)
 1. Download the `.zip` file from the [Github Releases](https://github.com/alexanderwdougherty/opengl-learn/releases) page.
 2. Open the terminal and extract the downloaded `.zip` file:
