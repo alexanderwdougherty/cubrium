@@ -181,18 +181,12 @@ int main()
         glm::vec3(1.5f, 0.0f, -0.6f)
     };
 
-    unsigned int VBO, cubeVAO, EBO;
+    unsigned int VBO, cubeVAO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
     glBindVertexArray(cubeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    /*
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    */
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -327,7 +321,7 @@ int main()
         lightingShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
         lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
-        for (int i = 0; i < sizeof(pointLightPositions) / sizeof(pointLightPositions[0]); i++) {
+        for (unsigned int i = 0; i < sizeof(pointLightPositions) / sizeof(pointLightPositions[0]); i++) {
             std::string baseName = "pointLights[" + std::to_string(i) +"].";
             lightingShader.setVec3(baseName + "position", pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z);
 
@@ -495,12 +489,28 @@ int main()
 
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &lightCubeVAO);
+    glDeleteVertexArrays(1, &transparentVAO);
     glDeleteVertexArrays(1, &quadVAO);
-    glDeleteVertexArrays(1, &framebuffer);
+    
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &transparentVBO);
     glDeleteBuffers(1, &quadVBO);
+    
+    glDeleteFramebuffers(1, &framebuffer);
+    glDeleteFramebuffers(1, &rbo);
 
+    glDeleteTextures(1, &textureColorBuffer);
+    glDeleteTextures(1, &diffuseMap);
+    glDeleteTextures(1, &specularMap);
+    glDeleteTextures(1, &windowTexture);
+    glDeleteTextures(1, &windowSpecular);
+    glDeleteTextures(1, &cubemapTexture);
+
+    glDeleteProgram(lightingShader.ID);
+    glDeleteProgram(lightCubeShader.ID);
+    glDeleteProgram(screenShader.ID);
+    glDeleteProgram(skyboxShader.ID);
+    
     glfwTerminate();
     return 0;
 }
