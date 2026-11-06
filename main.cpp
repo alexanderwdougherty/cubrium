@@ -25,6 +25,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char *path);
+unsigned int loadCubemap(std::vector<std::string> faces);
 
 const unsigned int SCREEN_WIDTH = 1000, SCREEN_HEIGHT = 1000;
 
@@ -36,7 +37,7 @@ float deltaTime = 0.0f, lastFrame = 0.0f;
 
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-const int effectMode = 3;
+const int effectMode = 0;
 
 int main()
 {
@@ -89,6 +90,7 @@ int main()
     Shader lightingShader("shader.vs", "shader.fs");
     Shader lightCubeShader("light_cube.vs", "light_cube.fs");
     Shader screenShader("screen.vs", "screen.fs");
+    Shader skyboxShader("skybox.vs", "skybox.fs");
 
     // X, Y, Z, NX, NY, NZ, S, T
     float vertices[] = {
@@ -233,14 +235,28 @@ int main()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    std::vector<std::string> skyboxFaces = {
+        "assets/skybox/right.jpg",
+        "assets/skybox/left.jpg",
+        "assets/skybox/top.jpg",
+        "assets/skybox/bottom.jpg",
+        "assets/skybox/front.jpg",
+        "assets/skybox/back.jpg"
+    };
+
     unsigned int diffuseMap = loadTexture("assets/pepe.jpg"),
     specularMap = loadTexture("assets/pepe_specular.png"),
     windowTexture = loadTexture("assets/window.png"),
-    windowSpecular = loadTexture("assets/window_specular.png");
+    windowSpecular = loadTexture("assets/window_specular.png"),
+    cubemapTexture = loadCubemap(skyboxFaces);
 
     lightingShader.use();
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
+    lightingShader.setInt("skybox", 3);
+
+    skyboxShader.use();
+    skyboxShader.setInt("skybox", 3);
 
     screenShader.use();
     screenShader.setInt("screenTex", 2);
@@ -286,6 +302,8 @@ int main()
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularMap);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         
         lightingShader.use();
 
@@ -297,17 +315,19 @@ int main()
         lightingShader.setVec3("light.position", lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(glGetUniformLocation(lightingShader.ID, "viewPos"), camera.Position.x, camera.Position.y, camera.Position.z);
 
-        Material currentMaterial = Materials::Brass;
+        Material currentMaterial = Materials::Chrome;
 
         lightingShader.setVec3("material.ambient", currentMaterial.ambient.x, currentMaterial.ambient.y, currentMaterial.ambient.z);
         lightingShader.setFloat("material.shininess", currentMaterial.shininess * 128.0f);
+        lightingShader.setFloat("material.reflectivity", currentMaterial.reflectivity);
+        lightingShader.setFloat("material.refractiveIndex", currentMaterial.refractiveIndex);
 
         lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
         lightingShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
         lightingShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
         lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < sizeof(pointLightPositions) / sizeof(pointLightPositions[0]); i++) {
             std::string baseName = "pointLights[" + std::to_string(i) +"].";
             lightingShader.setVec3(baseName + "position", pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z);
 
@@ -399,6 +419,23 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
+        glDisable(GL_CULL_FACE);
+        glDepthFunc(GL_LEQUAL);
+
+        skyboxShader.use();
+        glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
+
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(skyboxView));
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+        glBindVertexArray(lightCubeVAO);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glDepthFunc(GL_LESS);
+        glEnable(GL_CULL_FACE);
+
         std::map<float, glm::vec3> sortedWindows;
         for(unsigned int i = 0; i < sizeof(windowPositions) / sizeof(windowPositions[0]) ; i++)
         {
@@ -416,6 +453,9 @@ int main()
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, windowSpecular);
+
+        lightingShader.setFloat("material.reflectivity", 0.0f);
+        lightingShader.setFloat("material.refractiveIndex", 0.0f);
 
         glBindVertexArray(transparentVAO);
 
@@ -498,7 +538,45 @@ unsigned int loadTexture(char const * path)
     stbi_image_free(data);
 
     return textureID;
-};
+}
+
+unsigned int loadCubemap(std::vector<std::string> faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, & textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    stbi_set_flip_vertically_on_load(false);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            GLenum imageFormat = GL_RGB;
+            if (nrChannels == 1) imageFormat = GL_RED;
+            if (nrChannels == 3) imageFormat = GL_RGB;
+            if (nrChannels == 4) imageFormat = GL_RGBA;
+
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, imageFormat, width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Cubemap failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {

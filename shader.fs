@@ -13,6 +13,8 @@ struct Material {
     sampler2D diffuse;
     sampler2D specular;
     float shininess;
+    float reflectivity;
+    float refractiveIndex;
 };
 
 struct DirLight {
@@ -57,6 +59,7 @@ uniform Material material;
 uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
+uniform samplerCube skybox;
 
 uniform bool drawSingleColor;
 uniform vec3 singleColor;
@@ -90,6 +93,15 @@ void main()
         result += CalcPointLight(pointLights[i], norm, FragPos, viewDir, diffTex, specTex);
 
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir, diffTex, specTex);
+
+    if (material.reflectivity > 0.0)
+    {
+        vec3 I = -viewDir;
+        vec3 R = (material.refractiveIndex > 0.0)
+            ? refract(I, norm, 1.0 / material.refractiveIndex)
+            : reflect(I, norm);
+        result = mix(result, texture(skybox, R).rgb, material.reflectivity);
+    }
 
     FragColor = vec4(result, texColor.a);
 }
