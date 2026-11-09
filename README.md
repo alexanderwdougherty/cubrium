@@ -61,8 +61,8 @@ Currently not supported.
 
 ### Assets Used
 * **[Skybox](assets/skybox/)** by Joey de Vries.
-* **[Window](assets/window.png)** by Joey de Vries.
-* **[Crate](assets/crate.png)** by Joey de Vries
-* **[Emerald](assets/emerald.png)** by Mojang Studios.
-* **[Obsidian](assets/obsidian.png)** by Mojang Studios.
+* **[Window](assets/window/diffuse.png)** by Joey de Vries.
+* **[Crate](assets/crate/diffuse.png)** by Joey de Vries
+* **[Emerald](assets/emerald/diffuse.png)** by Mojang Studios.
+* **[Obsidian](assets/obsidian/diffuse.png)** by Mojang Studios.
 * **[Pepe](assets/pepe/diffuse.png)** by Unknown.
