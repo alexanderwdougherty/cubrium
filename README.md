@@ -57,3 +57,12 @@ Currently not supported.
 ## Credits & Acknowledgements
 * **LearnOpenGL Course:** This project is following the [LearnOpenGL](https://learnopengl.com/) course by Joey de Vries.
 * **Material Data:** The Ambient, Diffuse, Specular, and Shininess value are from [OpenGl Materials Reference](http://devernay.free.fr/cours/opengl/materials.html) by Frédéric Devernay.
+* **Mapping:** All Normal Maps, Specular Maps, Ambient Maps, and Displacement Maps were generated using the [NormalMap-Online](https://cpetry.github.io/NormalMap-Online/) tool by Christian Petry.
+
+### Assets Used
+* **[Skybox](assets/skybox/)** by Joey de Vries.
+* **[Window](assets/window.png)** by Joey de Vries.
+* **[Crate](assets/crate.png)** by Joey de Vries
+* **[Emerald](assets/emerald.png)** by Mojang Studios.
+* **[Obsidian](assets/obsidian.png)** by Mojang Studios.
+* **[Pepe](assets/pepe/diffuse.png)** by Unknown.

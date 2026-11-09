@@ -26,6 +26,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char *path);
 unsigned int loadCubemap(std::vector<std::string> faces);
+std::vector<float> buildVertexData(const float* v, size_t vertexCount);
 
 const unsigned int SCREEN_WIDTH = 1000, SCREEN_HEIGHT = 1000;
 
@@ -37,7 +38,7 @@ float deltaTime = 0.0f, lastFrame = 0.0f;
 
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-const int effectMode = 0;
+int effectMode = 0;
 
 int main()
 {
@@ -87,10 +88,10 @@ int main()
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    Shader lightingShader("shader.vs", "shader.fs");
-    Shader lightCubeShader("light_cube.vs", "light_cube.fs");
-    Shader screenShader("screen.vs", "screen.fs");
-    Shader skyboxShader("skybox.vs", "skybox.fs");
+    Shader lightingShader("shaders/shader.vs", "shaders/shader.fs");
+    Shader lightCubeShader("shaders/light_cube.vs", "shaders/light_cube.fs");
+    Shader screenShader("shaders/screen.vs", "shaders/screen.fs");
+    Shader skyboxShader("shaders/skybox.vs", "shaders/skybox.fs");
 
     // X, Y, Z, NX, NY, NZ, S, T
     float vertices[] = {
@@ -172,35 +173,44 @@ int main()
         glm::vec3(-4.0f, 2.0f, -12.0f),
         glm::vec3(0.0f, 0.0f, -3.0f)
     };
-
+    
     // X, Y, Z
     glm::vec3 windowPositions[] = {
-        glm::vec3(1.5f, 0.0f, 0.5f),
+        glm::vec3(1.5f, 0.0f, 1.5f),
         glm::vec3(0.0f, 0.0f, 1.7f),
         glm::vec3(-0.5f, 0.0f, -2.3f),
-        glm::vec3(1.5f, 0.0f, -0.6f)
+        glm::vec3(1.5f, 0.0f, -1.6f)
     };
+
+    const GLsizei stride = 14 * sizeof(float); // position: 0-2, normal: 3-5, uv = 6-7, tangent: 8-10, bitangent: 11-13
+
+    std::vector<float> cubeData = buildVertexData(vertices, 36);
+    std::vector<float> windowData = buildVertexData(transparentVertices, 6);
 
     unsigned int VBO, cubeVAO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &VBO);
     glBindVertexArray(cubeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, cubeData.size() * sizeof(float), cubeData.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(2);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float)));
+    glEnableVertexAttribArray(4);
 
     unsigned int lightCubeVAO;
     glGenVertexArrays(1, &lightCubeVAO);
     glBindVertexArray(lightCubeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
 
     unsigned int transparentVAO, transparentVBO;
@@ -208,14 +218,18 @@ int main()
     glGenBuffers(1, &transparentVBO);
     glBindVertexArray(transparentVAO);
     glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, windowData.size() * sizeof(float), windowData.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(2);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float)));
+    glEnableVertexAttribArray(4);
 
     unsigned int quadVAO, quadVBO;
     glGenVertexArrays(1, &quadVAO);
@@ -238,22 +252,41 @@ int main()
         "assets/skybox/back.jpg"
     };
 
-    unsigned int diffuseMap = loadTexture("assets/pepe.jpg"),
-    specularMap = loadTexture("assets/pepe_specular.png"),
-    windowTexture = loadTexture("assets/window.png"),
-    windowSpecular = loadTexture("assets/window_specular.png"),
-    cubemapTexture = loadCubemap(skyboxFaces);
+    unsigned int windowTexture = loadTexture("assets/window/diffuse.png"),
+    windowSpecular = loadTexture("assets/window/specular.png"),
+    windowNormal = loadTexture("assets/window/normal.png"),
+    windowDisplacement = loadTexture("assets/window/displacement.png"),
+    windowAmbient = loadTexture("assets/window/ambient.png");
+
+    struct CubeSetup { unsigned int diffuse, specular, normal, displacement, ambient; Material material; };
+    std::vector<CubeSetup> cubeTextures = {
+        { loadTexture("assets/pepe/diffuse.png"), loadTexture("assets/pepe/specular.png"), loadTexture("assets/pepe/normal.png"),
+        loadTexture("assets/pepe/displacement.png"), loadTexture("assets/pepe/ambient.png"), Materials::PlasticWhite },
+
+        { loadTexture("assets/emerald/diffuse.png"), loadTexture("assets/emerald/specular.png"), loadTexture("assets/emerald/normal.png"),
+        loadTexture("assets/emerald/displacement.png"), loadTexture("assets/emerald/ambient.png"), Materials::Emerald },
+
+        { loadTexture("assets/obsidian/diffuse.png"), loadTexture("assets/obsidian/specular.png"), loadTexture("assets/obsidian/normal.png"),
+        loadTexture("assets/obsidian/displacement.png"), loadTexture("assets/obsidian/ambient.png"), Materials::Obsidian }
+
+        // { windowTexture, windowSpecular, windowNormal, windowDisplacement, windowAmbient, Materials::Air }
+    };
+
+    unsigned int cubemapTexture = loadCubemap(skyboxFaces);
 
     lightingShader.use();
     lightingShader.setInt("material.diffuse", 0);
-    lightingShader.setInt("material.specular", 1);
-    lightingShader.setInt("skybox", 3);
+    lightingShader.setInt("material.specularMap", 1);
+    lightingShader.setInt("material.normalMap", 2);
+    lightingShader.setInt("material.displacementMap", 3);
+    lightingShader.setInt("material.ambientMap", 4);
+    lightingShader.setInt("skybox", 5);
 
     skyboxShader.use();
-    skyboxShader.setInt("skybox", 3);
+    skyboxShader.setInt("skybox", 5);
 
     screenShader.use();
-    screenShader.setInt("screenTex", 2);
+    screenShader.setInt("screenTex", 6);
 
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
@@ -292,29 +325,15 @@ int main()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseMap);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, specularMap);
-        glActiveTexture(GL_TEXTURE3);
+        glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         
         lightingShader.use();
-
-        lightingShader.setInt("material.diffuse", 0);
-        lightingShader.setInt("material.specular", 1);
         
         lightingShader.setBool("drawSingleColor", false);
 
         lightingShader.setVec3("light.position", lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(glGetUniformLocation(lightingShader.ID, "viewPos"), camera.Position.x, camera.Position.y, camera.Position.z);
-
-        Material currentMaterial = Materials::Chrome;
-
-        lightingShader.setVec3("material.ambient", currentMaterial.ambient.x, currentMaterial.ambient.y, currentMaterial.ambient.z);
-        lightingShader.setFloat("material.shininess", currentMaterial.shininess * 128.0f);
-        lightingShader.setFloat("material.reflectivity", currentMaterial.reflectivity);
-        lightingShader.setFloat("material.refractiveIndex", currentMaterial.refractiveIndex);
 
         lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
         lightingShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
@@ -349,7 +368,6 @@ int main()
         lightingShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(25.0f), glm::vec3(0.5f, 1.0f, 0.0f));
 
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
@@ -365,9 +383,41 @@ int main()
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilMask(0xFF);
 
+        const float spacing = 1.5f;
+        auto cubeModel = [&](unsigned int i, float scale) {
+            float x = (i - (cubeTextures.size() - 1) / 2.0f) * spacing;
+            glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.0f, 0.0f));
+            model = glm::rotate(model, (float)glfwGetTime() * glm::radians(25.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+            return glm::scale(model, glm::vec3(scale));
+        };
+
+        lightingShader.setFloat("heightScale", 0.05f);
+
         glBindVertexArray(cubeVAO);
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (unsigned int i = 0; i < cubeTextures.size(); i++)
+        {
+            const Material &material = cubeTextures[i].material;
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cubeTextures[i].diffuse);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, cubeTextures[i].specular);
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, cubeTextures[i].normal);
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, cubeTextures[i].displacement);
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, cubeTextures[i].ambient);
+
+            lightingShader.setVec3("material.ambient", material.ambient.x, material.ambient.y, material.ambient.z);
+            lightingShader.setFloat("material.shininess", material.shininess * 128.0f);
+            lightingShader.setFloat("material.reflectivity", material.reflectivity);
+            lightingShader.setFloat("material.refractiveIndex", material.refractiveIndex);
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeModel(i, 1.0f)));
+            // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
@@ -377,10 +427,11 @@ int main()
         lightingShader.setBool("drawSingleColor", true);
         lightingShader.setVec3("singleColor", 0.0f, 0.5f, 0.0f);
 
-        glm::mat4 outlineModel = glm::mat4(1.0f);
-        outlineModel = glm::rotate(outlineModel, (float)glfwGetTime() * glm::radians(25.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        outlineModel = glm::scale(outlineModel, glm::vec3(1.04f, 1.04f, 1.04f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(outlineModel));
+        for (unsigned int i = 0; i < cubeTextures.size(); i++)
+        {
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeModel(i, 1.05f)));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -423,7 +474,7 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
         glBindVertexArray(lightCubeVAO);
-        glActiveTexture(GL_TEXTURE3);
+        glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -444,9 +495,16 @@ int main()
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, windowTexture);
-
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, windowSpecular);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, windowNormal);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, windowDisplacement);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, windowAmbient);
+
+        lightingShader.setFloat("heightScale", 0.0f);
 
         lightingShader.setFloat("material.reflectivity", 0.0f);
         lightingShader.setFloat("material.refractiveIndex", 0.0f);
@@ -455,10 +513,10 @@ int main()
 
         unsigned int windowModelLoc = glGetUniformLocation(lightingShader.ID, "model");
 
-        for(std::map<float, glm::vec3>::reverse_iterator it = sortedWindows.rbegin(); it != sortedWindows.rend(); ++it)
+        for(std::map<float, glm::vec3>::reverse_iterator i = sortedWindows.rbegin(); i != sortedWindows.rend(); ++i)
         {
             model = glm::mat4(1.0f);
-            model = glm::translate(model, it -> second);
+            model = glm::translate(model, i -> second);
 
             // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glUniformMatrix4fv(windowModelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -478,7 +536,7 @@ int main()
         screenShader.setInt("effectMode", effectMode);
 
         glBindVertexArray(quadVAO);
-        glActiveTexture(GL_TEXTURE2);
+        glActiveTexture(GL_TEXTURE6);
 
         glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -497,13 +555,22 @@ int main()
     glDeleteBuffers(1, &quadVBO);
     
     glDeleteFramebuffers(1, &framebuffer);
-    glDeleteFramebuffers(1, &rbo);
+    glDeleteRenderbuffers(1, &rbo);
 
     glDeleteTextures(1, &textureColorBuffer);
-    glDeleteTextures(1, &diffuseMap);
-    glDeleteTextures(1, &specularMap);
+    for (CubeSetup &c : cubeTextures)
+    {
+        glDeleteTextures(1, &c.diffuse);
+        glDeleteTextures(1, &c.specular);
+        glDeleteTextures(1, &c.normal);
+        glDeleteTextures(1, &c.displacement);
+        glDeleteTextures(1, &c.ambient);
+    }
     glDeleteTextures(1, &windowTexture);
     glDeleteTextures(1, &windowSpecular);
+    glDeleteTextures(1, &windowNormal);
+    glDeleteTextures(1, &windowDisplacement);
+    glDeleteTextures(1, &windowAmbient);
     glDeleteTextures(1, &cubemapTexture);
 
     glDeleteProgram(lightingShader.ID);
@@ -513,6 +580,58 @@ int main()
     
     glfwTerminate();
     return 0;
+}
+
+std::vector<float> buildVertexData(const float* inputVertices, size_t vertexCount)
+{
+    const int inputFPV = 8, outputFPV = 14; // FPV = Floats Per Vertex
+
+    std::vector<float> outputVertices;
+    outputVertices.reserve(vertexCount * outputFPV);
+
+    for (size_t i = 0; i + 2 < vertexCount; i += 3)
+    {
+        auto readPos = [&](size_t k) // k = Corners
+        {
+            size_t base = (i + k) * inputFPV;
+            return glm::vec3(inputVertices[base], inputVertices[base + 1], inputVertices[base + 2]);
+        };
+
+        auto readTexCoord = [&](size_t k)
+        {
+            size_t base = (i + k) * inputFPV;
+            return glm::vec2(inputVertices[base + 6], inputVertices[base + 7]);
+        };
+
+        glm::vec3 edgeK2 = readPos(1) - readPos(0);
+        glm::vec3 edgeK3 = readPos(2) - readPos(0);
+
+        glm::vec2 uvK2 = readTexCoord(1) - readTexCoord(0);
+        glm::vec2 uvK3 = readTexCoord(2) - readTexCoord(0);
+
+        float inverseFactor = 1.0f / (uvK2.x * uvK3.y - uvK3.x * uvK2.y);
+
+        glm::vec3 tangent = glm::normalize(inverseFactor * (uvK3.y * edgeK2 - uvK2.y * edgeK3));
+        glm::vec3 bitangent = glm::normalize(inverseFactor * (-uvK3.x * edgeK2 + uvK2.x * edgeK3));
+
+        for (size_t k = 0; k < 3; k++)
+        {
+            size_t base = (i + k) * inputFPV;
+
+            for (int j = 0; j < inputFPV; j++)
+                outputVertices.push_back(inputVertices[base + j]);
+
+            outputVertices.push_back(tangent.x);
+            outputVertices.push_back(tangent.y);
+            outputVertices.push_back(tangent.z);
+
+            outputVertices.push_back(bitangent.x);
+            outputVertices.push_back(bitangent.y);
+            outputVertices.push_back(bitangent.z);
+        }
+    }
+
+    return outputVertices;
 }
 
 unsigned int loadTexture(char const * path)
@@ -593,19 +712,32 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
+bool iKeyPressed = false;
+
 void processInput(GLFWwindow *window)
 {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true); 
     
-    if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
-    if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         camera.ProcessKeyboard(LEFT, deltaTime);
-    if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    
+    if(glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+    {
+        if (!iKeyPressed)
+        {
+            effectMode = (effectMode + 1) % 5;
+            iKeyPressed = true;
+        }
+    }
+    if(glfwGetKey(window, GLFW_KEY_I) == GLFW_RELEASE)
+        iKeyPressed = false;
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
