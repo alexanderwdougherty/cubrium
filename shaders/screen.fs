@@ -1,4 +1,4 @@
-// screen.fs
+// shaders/screen.fs
 
 # version 330 core
 

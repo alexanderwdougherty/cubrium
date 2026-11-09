@@ -1,4 +1,4 @@
-// shader.fs
+// shaders/shader.fs
 
 # version 330 core
 

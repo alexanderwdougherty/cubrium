@@ -1,4 +1,4 @@
-// screen.vs
+// shaders/screen.vs
 
 # version 330 core
 

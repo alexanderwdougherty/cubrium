@@ -1,4 +1,4 @@
-// light_cube.fs
+// shaders/light_cube.fs
 
 # version 330 core
 

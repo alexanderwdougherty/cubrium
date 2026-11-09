@@ -65,4 +65,5 @@ Currently not supported.
 * **[Crate](assets/crate/diffuse.png)** by Joey de Vries
 * **[Emerald](assets/emerald/diffuse.png)** by Mojang Studios.
 * **[Obsidian](assets/obsidian/diffuse.png)** by Mojang Studios.
-* **[Pepe](assets/pepe/diffuse.png)** by Unknown.
+* **[Ice](assets/ice/diffuse.png)** by Mojang Studios.
+* **[Pepe](assets/pepe/diffuse.png)** - Creator Unknown.

@@ -6,6 +6,7 @@
 # include "shader_s.h"
 # include "camera.h"
 # include "materials.h"
+# include "world.h"
 
 # define STB_IMAGE_IMPLEMENTATION
 # include <stb_image.h>
@@ -270,9 +271,10 @@ int main()
         loadTexture("assets/emerald/displacement.png"), loadTexture("assets/emerald/ambient.png"), Materials::Emerald },
 
         { loadTexture("assets/obsidian/diffuse.png"), loadTexture("assets/obsidian/specular.png"), loadTexture("assets/obsidian/normal.png"),
-        loadTexture("assets/obsidian/displacement.png"), loadTexture("assets/obsidian/ambient.png"), Materials::Obsidian }
+        loadTexture("assets/obsidian/displacement.png"), loadTexture("assets/obsidian/ambient.png"), Materials::Obsidian },
 
-        // { windowTexture, windowSpecular, windowNormal, windowDisplacement, windowAmbient, Materials::Air }
+        { loadTexture("assets/ice/diffuse.png"), loadTexture("assets/ice/specular.png"), loadTexture("assets/ice/normal.png"),
+        loadTexture("assets/ice/displacement.png"), loadTexture("assets/ice/ambient.png"), Materials::Ice }
     };
 
     unsigned int cubemapTexture = loadCubemap(skyboxFaces);

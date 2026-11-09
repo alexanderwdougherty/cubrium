@@ -1,4 +1,4 @@
-// skybox.fs
+// shaders/skybox.fs
 
 # version 330 core
 
