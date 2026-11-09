@@ -29,6 +29,8 @@ unsigned int loadCubemap(std::vector<std::string> faces);
 std::vector<float> buildVertexData(const float* v, size_t vertexCount);
 
 const unsigned int SCREEN_WIDTH = 1000, SCREEN_HEIGHT = 1000;
+int windowWidth = SCREEN_WIDTH, windowHeight = SCREEN_HEIGHT;
+bool framebufferResized = false;
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCREEN_WIDTH / 2.0f, lastY = SCREEN_HEIGHT / 2.0f;
@@ -62,6 +64,7 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwGetFramebufferSize(window, & windowWidth, &windowHeight);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -295,7 +298,7 @@ int main()
     unsigned int textureColorBuffer;
     glGenTextures(1, &textureColorBuffer);
     glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
@@ -303,7 +306,7 @@ int main()
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -317,6 +320,19 @@ int main()
         lastFrame = currentFrame;
 
         processInput(window);
+
+        if (framebufferResized)
+        {
+            glViewport(0, 0, windowWidth, windowHeight);
+
+            glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+            
+            glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
+
+            framebufferResized = false;
+        }
 
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glEnable(GL_DEPTH_TEST);
@@ -370,7 +386,7 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
 
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
 
         unsigned int modelLoc = glGetUniformLocation(lightingShader.ID, "model"),
         viewLoc = glGetUniformLocation(lightingShader.ID, "view"),
@@ -709,7 +725,12 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    glViewport(0, 0, width, height);
+    if (width == 0 || height == 0)
+        return;
+    
+    windowWidth = width;
+    windowHeight = height;
+    framebufferResized = true;
 }
 
 bool iKeyPressed = false;
