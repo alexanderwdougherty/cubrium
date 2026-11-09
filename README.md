@@ -1,6 +1,12 @@
 # Learning OpenGL
 This project depicts my journey learning OpenGL, heavily based on the [LearnOpenGL](https://learnopengl.com/) course by Joey de Vries. I will hopefully turning this project into a fully functional voxel-based sandbox as time progresses.
 
+## Controls
+* Movement: **Mouse** plus **WASD** or **Arrow Keys**.
+* Zoom: **Scroll Wheel**.
+* Framebuffer Rotation: **I** key.
+* Exit: **Escape** key.
+
 ---
 
 ## Prerequisites
@@ -10,7 +16,7 @@ Before running the application, verify GLFW is installed.
 
 ```bash
 sudo apt update
-sudo apt instal libglfw3
+sudo apt install libglfw3
 ldd main
 ```
 ### Fedora:
@@ -30,7 +36,7 @@ ldd main
 2. Open the terminal and extract the downloaded `.zip` file:
 
     ```bash
-    unzip opengl-learn-v0.0.2-linux.zip -d opengl-learn
+    unzip opengl-learn-v0.0.3-linux.zip -d opengl-learn
     ```
 3. Navigate to the new folder:
 
