@@ -1,5 +1,5 @@
-# Learning OpenGL
-This project depicts my journey learning OpenGL, heavily based on the [LearnOpenGL](https://learnopengl.com/) course by Joey de Vries. I will hopefully turning this project into a fully functional voxel-based sandbox as time progresses.
+# Cubrium
+This project depicts my journey learning OpenGL, turning this into a voxel-based sandbox named Cubrium.
 
 ## Controls
 * Movement: **Mouse** plus **WASD** or **Arrow Keys**.
