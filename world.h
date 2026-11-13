@@ -10,10 +10,9 @@
 enum BlockType : uint8_t {
     AIR = 0,
     PEPE,
-    OBSIDIAN,
-    ICE,
     EMERALD,
-    IDK
+    OBSIDIAN,
+    ICE
 };
 
 
@@ -53,12 +52,12 @@ class World
                 blocks[pos] = type;
         }
 
-        void generateTerrain(int thickness) // Slab of Pepes
+        void generateTerrain(int thickness, uint8_t type) // Slab of Pepes
         {
             for (int y = 0; y < thickness && y < sizeY; y++)
                 for (int z = 0; z < sizeZ; z++)
                     for (int x = 0; x < sizeX; x++)
-                        set(x, y, z, PEPE);
+                        set(x, y, z, type);
         }
 
         bool isExposed(int x, int y, int z) const

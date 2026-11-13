@@ -150,13 +150,13 @@ int main()
 
     // X, Y, Z, NX, NY, NZ, S, T
     float transparentVertices[] = {
-        -0.5f, 0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
-        -0.5f, -0.5f, 0.0f,     0.0f, 0.0f, -1.0f,      0.0f, 0.0f,
-        0.5f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
+        -0.5f, 0.5f, 0.0f,      0.0f, 0.0f, 1.0f,       0.0f, 1.0f,
+        -0.5f, -0.5f, 0.0f,     0.0f, 0.0f, 1.0f,       0.0f, 0.0f,
+        0.5f, -0.5f, 0.0f,      0.0f, 0.0f, 1.0f,       1.0f, 0.0f,
 
-        -0.5f, 0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      0.0f, 1.0f,
-        0.5f, -0.5f, 0.0f,      0.0f, 0.0f, -1.0f,      1.0f, 0.0f,
-        0.5f, 0.5f, 0.0f,       0.0f, 0.0f, -1.0f,      1.0f, 1.0f
+        -0.5f, 0.5f, 0.0f,      0.0f, 0.0f, 1.0f,       0.0f, 1.0f,
+        0.5f, -0.5f, 0.0f,      0.0f, 0.0f, 1.0f,       1.0f, 0.0f,
+        0.5f, 0.5f, 0.0f,       0.0f, 0.0f, 1.0f,       1.0f, 1.0f
     };
 
     // X, Y, S, T
@@ -186,7 +186,7 @@ int main()
         glm::vec3(1.5f, 0.0f, -1.6f)
     };
 
-    const GLsizei stride = 14 * sizeof(float); // position: 0-2, normal: 3-5, uv = 6-7, tangent: 8-10, bitangent: 11-13
+    const GLsizei stride = 14 * sizeof(float); // pos: 0-2, normal: 3-5, uv = 6-7, tangent: 8-10, bitangent: 11-13
 
     std::vector<float> cubeData = buildVertexData(vertices, 36);
     std::vector<float> windowData = buildVertexData(transparentVertices, 6);
@@ -208,6 +208,9 @@ int main()
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float)));
     glEnableVertexAttribArray(4);
+
+    glDisableVertexAttribArray(5);
+    glVertexAttrib3f(5, 0.0f, 0.0f, 0.0f);
 
     unsigned int lightCubeVAO;
     glGenVertexArrays(1, &lightCubeVAO);
@@ -235,6 +238,9 @@ int main()
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float)));
     glEnableVertexAttribArray(4);
 
+    glDisableVertexAttribArray(5);
+    glVertexAttrib3f(5, 0.0f, 0.0f, 0.0f);
+
     unsigned int quadVAO, quadVBO;
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
@@ -246,13 +252,52 @@ int main()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
-
+    
     World world(32, 4, 32);
-    world.generateTerrain(1);
+    world.generateTerrain(1, ICE);
 
     glm::vec3 worldOrigin(-world.sizeX / 2.0f, -2.0f, -world.sizeZ / 2.0f);
 
     struct VoxelBatch { unsigned int vao, vbo; GLsizei count; };
+
+    auto buildVoxelBatch = [&](uint8_t type)
+    {
+        std::vector<glm::vec3> offsets = world.buildInstanceOffsets(worldOrigin, type);
+
+        VoxelBatch batch;
+        batch.count = (GLsizei)offsets.size();
+
+        glGenBuffers(1, &batch.vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, batch.vbo);
+        glBufferData(GL_ARRAY_BUFFER, offsets.size() * sizeof(glm::vec3), offsets.data(), GL_STATIC_DRAW);
+
+        glGenVertexArrays(1, &batch.vao);
+        glBindVertexArray(batch.vao);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8 * sizeof(float)));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float)));
+        glEnableVertexAttribArray(4);
+
+        glBindBuffer(GL_ARRAY_BUFFER, batch.vbo);
+        glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+        glEnableVertexAttribArray(5);
+        glVertexAttribDivisor(5, 1);
+
+        return batch;
+    };
+
+    std::vector<VoxelBatch> voxelBatches(ICE + 1);
+    for (unsigned int type = PEPE; type <= ICE; type++)
+        voxelBatches[type] = buildVoxelBatch((uint8_t)type);
 
     std::vector<std::string> skyboxFaces = {
         "assets/skybox/right.jpg",
@@ -283,6 +328,8 @@ int main()
         { loadTexture("assets/ice/diffuse.png"), loadTexture("assets/ice/specular.png"), loadTexture("assets/ice/normal.png"),
         loadTexture("assets/ice/displacement.png"), loadTexture("assets/ice/ambient.png"), Materials::Ice }
     };
+
+    const int blockTexture[] = { -1, 0, 1, 2, 3 };
 
     unsigned int cubemapTexture = loadCubemap(skyboxFaces);
 
@@ -416,7 +463,9 @@ int main()
             return glm::scale(model, glm::vec3(scale));
         };
 
-        lightingShader.setFloat("heightScale", 0.05f);
+        lightingShader.setFloat("heightScale", 0.025f);
+
+        /*
 
         glBindVertexArray(cubeVAO);
         for (unsigned int i = 0; i < cubeTextures.size(); i++)
@@ -444,6 +493,44 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
+        */
+
+        glStencilMask(0x00);
+        lightingShader.setFloat("heightScale", 0.025f);
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+
+        for (unsigned int type = PEPE; type <= ICE; type++)
+        {
+            const VoxelBatch &batch = voxelBatches[type];
+            if (batch.count == 0 || blockTexture[type] < 0)
+                continue;
+            
+                const CubeSetup &blockSet = cubeTextures[blockTexture[type]];
+                const Material &material = blockSet.material;
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, blockSet.diffuse);
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, blockSet.specular);
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, blockSet.normal);
+                glActiveTexture(GL_TEXTURE3);
+                glBindTexture(GL_TEXTURE_2D, blockSet.displacement);
+                glActiveTexture(GL_TEXTURE4);
+                glBindTexture(GL_TEXTURE_2D, blockSet.ambient);
+
+                lightingShader.setVec3("material.ambient", material.ambient.x, material.ambient.y, material.ambient.z);
+                lightingShader.setFloat("material.shininess", material.shininess * 128.0f);
+                lightingShader.setFloat("material.reflectivity", material.reflectivity);
+                lightingShader.setFloat("material.refractiveIndex", material.refractiveIndex);
+
+                glBindVertexArray(batch.vao);
+                // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glDrawArraysInstanced(GL_TRIANGLES, 0, 36, batch.count);
+        }
+
+        glBindVertexArray(cubeVAO);
+
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
         glDisable(GL_DEPTH_TEST);
@@ -455,10 +542,8 @@ int main()
         for (unsigned int i = 0; i < cubeTextures.size(); i++)
         {
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cubeModel(i, 1.05f)));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            // glDrawArrays(GL_TRIANGLES, 0, 36);
         }
-
-        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
@@ -506,11 +591,11 @@ int main()
         glDepthFunc(GL_LESS);
         glEnable(GL_CULL_FACE);
 
-        std::map<float, glm::vec3> sortedWindows;
+        std::multimap<float, glm::vec3> sortedWindows;
         for(unsigned int i = 0; i < sizeof(windowPositions) / sizeof(windowPositions[0]) ; i++)
         {
             float dist = glm::length(camera.Position - windowPositions[i]);
-            sortedWindows[dist] = windowPositions[i];
+            sortedWindows.insert({dist, windowPositions[i]});
         }
 
         glDisable(GL_CULL_FACE);
@@ -531,6 +616,8 @@ int main()
 
         lightingShader.setFloat("heightScale", 0.0f);
 
+        lightingShader.setVec3("material.ambient", 1.0f, 1.0f, 1.0f);
+        lightingShader.setFloat("material.shininess", 32.0f);
         lightingShader.setFloat("material.reflectivity", 0.0f);
         lightingShader.setFloat("material.refractiveIndex", 0.0f);
 
@@ -538,7 +625,7 @@ int main()
 
         unsigned int windowModelLoc = glGetUniformLocation(lightingShader.ID, "model");
 
-        for(std::map<float, glm::vec3>::reverse_iterator i = sortedWindows.rbegin(); i != sortedWindows.rend(); ++i)
+        for(auto i = sortedWindows.rbegin(); i != sortedWindows.rend(); ++i)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, i -> second);
@@ -602,6 +689,12 @@ int main()
     glDeleteProgram(lightCubeShader.ID);
     glDeleteProgram(screenShader.ID);
     glDeleteProgram(skyboxShader.ID);
+
+    for (VoxelBatch &batch : voxelBatches)
+    {
+        glDeleteVertexArrays(1, &batch.vao);
+        glDeleteBuffers(1, &batch.vbo);
+    }
     
     glfwTerminate();
     return 0;
@@ -680,8 +773,8 @@ unsigned int loadTexture(char const * path)
         glTexImage2D(GL_TEXTURE_2D, 0, imageFormat, width, height, 0, imageFormat, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }

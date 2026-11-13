@@ -93,10 +93,10 @@ vec2 ParallaxMapping(vec2 uv, vec3 viewDirTS)
     if (heightScale <= 0.0)
         return uv;
 
-    const float minLayers = 8.0, maxLayers = 32.0;
+    const float minLayers = 8.0, maxLayers = 64.0;
     float layerDepth = 1.0 / mix(maxLayers, minLayers, abs(viewDirTS.z));
 
-    vec2 deltaUV = (viewDirTS.xy / viewDirTS.z * heightScale) / mix(maxLayers, minLayers, abs(viewDirTS.z));
+    vec2 deltaUV = (viewDirTS.xy / max(viewDirTS.z, 0.2)) * heightScale / mix(maxLayers, minLayers, abs(viewDirTS.z));
 
     vec2 currentUV = uv;
     float currentDepth = 0.0, mapDepth = SampleDepth(currentUV);
