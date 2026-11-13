@@ -247,6 +247,13 @@ int main()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    World world(32, 4, 32);
+    world.generateTerrain(1);
+
+    glm::vec3 worldOrigin(-world.sizeX / 2.0f, -2.0f, -world.sizeZ / 2.0f);
+
+    struct VoxelBatch { unsigned int vao, vbo; GLsizei count; };
+
     std::vector<std::string> skyboxFaces = {
         "assets/skybox/right.jpg",
         "assets/skybox/left.jpg",
