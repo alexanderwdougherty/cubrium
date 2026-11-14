@@ -64,6 +64,7 @@ Currently not supported.
 * **LearnOpenGL Course:** This project is following the [LearnOpenGL](https://learnopengl.com/) course by Joey de Vries.
 * **Material Data:** The Ambient, Diffuse, Specular, and Shininess value are from [OpenGl Materials Reference](http://devernay.free.fr/cours/opengl/materials.html) by Frédéric Devernay.
 * **Mapping:** All Normal Maps, Specular Maps, Ambient Maps, and Displacement Maps were generated using the [NormalMap-Online](https://cpetry.github.io/NormalMap-Online/) tool by Christian Petry.
+* **Hash Function Constants:** Constants used in [world.h](world.h#L163-166) are from [Optimized Spatial Hashing for Collision Detection of Deformable Objects](https://matthias-research.github.io/pages/publications/tetraederCollision.pdf) by Matthias Teschner, Bruno Heidelberger, Matthias Müller, Danat Pomeranets, and Markus Gross.
 
 ### Assets Used
 * **[Skybox](assets/skybox/)** by Joey de Vries.

@@ -110,7 +110,7 @@ vec2 ParallaxMapping(vec2 uv, vec3 viewDirTS)
 
     vec2 prevUV = currentUV + deltaUV; // just imagine the seconds saved if we could use the greek keyboard and just use the delta symbol instead of "delta" every time
     float afterDepth = mapDepth - currentDepth, beforeDepth = SampleDepth(prevUV) - currentDepth + layerDepth;
-    float weight = afterDepth / (afterDepth - beforeDepth);
+    float weight = (abs(afterDepth - beforeDepth) > 0.0001) ? clamp(afterDepth / (afterDepth - beforeDepth), 0.0, 1.0) : 0.0;
 
     return prevUV * weight + currentUV * (1.0 - weight);
 }
