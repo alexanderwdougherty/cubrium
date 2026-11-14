@@ -12,7 +12,13 @@ enum BlockType : uint8_t {
     PEPE,
     EMERALD,
     OBSIDIAN,
-    ICE
+    ICE,
+    COPPER,
+    GOLD,
+    SILVER,
+    DIAMOND,
+    GLASS,
+    CRATE
 };
 
 

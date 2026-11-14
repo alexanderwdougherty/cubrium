@@ -172,8 +172,8 @@ int main()
 
     // X, Y, Z
     glm::vec3 pointLightPositions[] = {
-        glm::vec3(0.7f, 0.2f, 2.0f),
-        glm::vec3(2.3f, -3.3f, -4.0f),
+        glm::vec3(1.0f, 0.0f, 2.0f),
+        glm::vec3(3.0f, -4.0f, -4.0f),
         glm::vec3(-4.0f, 2.0f, -12.0f),
         glm::vec3(0.0f, 0.0f, -3.0f)
     };
@@ -181,9 +181,9 @@ int main()
     // X, Y, Z
     glm::vec3 windowPositions[] = {
         glm::vec3(1.5f, 0.0f, 1.5f),
-        glm::vec3(0.0f, 0.0f, 1.7f),
-        glm::vec3(-0.5f, 0.0f, -2.3f),
-        glm::vec3(1.5f, 0.0f, -1.6f)
+        glm::vec3(-1.5f, 0.0f, 1.5f),
+        glm::vec3(-1.5f, 0.0f, -1.5f),
+        glm::vec3(1.5f, 0.0f, -1.5f),
     };
 
     const GLsizei stride = 14 * sizeof(float); // pos: 0-2, normal: 3-5, uv = 6-7, tangent: 8-10, bitangent: 11-13
@@ -254,7 +254,7 @@ int main()
     glEnableVertexAttribArray(1);
     
     World world(32, 4, 32);
-    world.generateTerrain(1, ICE);
+    world.generateTerrain(1, GLASS);
 
     glm::vec3 worldOrigin(-world.sizeX / 2.0f, -2.0f, -world.sizeZ / 2.0f);
 
@@ -295,8 +295,8 @@ int main()
         return batch;
     };
 
-    std::vector<VoxelBatch> voxelBatches(ICE + 1);
-    for (unsigned int type = PEPE; type <= ICE; type++)
+    std::vector<VoxelBatch> voxelBatches(CRATE + 1);
+    for (unsigned int type = PEPE; type <= CRATE; type++)
         voxelBatches[type] = buildVoxelBatch((uint8_t)type);
 
     std::vector<std::string> skyboxFaces = {
@@ -308,28 +308,37 @@ int main()
         "assets/skybox/back.jpg"
     };
 
-    unsigned int windowTexture = loadTexture("assets/window/diffuse.png"),
-    windowSpecular = loadTexture("assets/window/specular.png"),
-    windowNormal = loadTexture("assets/window/normal.png"),
-    windowDisplacement = loadTexture("assets/window/displacement.png"),
-    windowAmbient = loadTexture("assets/window/ambient.png");
+    unsigned int windowTexture = loadTexture("assets/glass/diffuse.png"),
+    windowSpecular = loadTexture("assets/glass/specular.png"),
+    windowNormal = loadTexture("assets/glass/normal.png"),
+    windowDisplacement = loadTexture("assets/glass/displacement.png"),
+    windowAmbient = loadTexture("assets/glass/ambient.png");
 
     struct CubeSetup { unsigned int diffuse, specular, normal, displacement, ambient; Material material; };
     std::vector<CubeSetup> cubeTextures = {
         { loadTexture("assets/pepe/diffuse.png"), loadTexture("assets/pepe/specular.png"), loadTexture("assets/pepe/normal.png"),
         loadTexture("assets/pepe/displacement.png"), loadTexture("assets/pepe/ambient.png"), Materials::PlasticWhite },
-
         { loadTexture("assets/emerald/diffuse.png"), loadTexture("assets/emerald/specular.png"), loadTexture("assets/emerald/normal.png"),
         loadTexture("assets/emerald/displacement.png"), loadTexture("assets/emerald/ambient.png"), Materials::Emerald },
-
         { loadTexture("assets/obsidian/diffuse.png"), loadTexture("assets/obsidian/specular.png"), loadTexture("assets/obsidian/normal.png"),
         loadTexture("assets/obsidian/displacement.png"), loadTexture("assets/obsidian/ambient.png"), Materials::Obsidian },
-
         { loadTexture("assets/ice/diffuse.png"), loadTexture("assets/ice/specular.png"), loadTexture("assets/ice/normal.png"),
-        loadTexture("assets/ice/displacement.png"), loadTexture("assets/ice/ambient.png"), Materials::Ice }
+        loadTexture("assets/ice/displacement.png"), loadTexture("assets/ice/ambient.png"), Materials::Ice },
+        { loadTexture("assets/copper/diffuse.png"), loadTexture("assets/copper/specular.png"), loadTexture("assets/copper/normal.png"), 
+        loadTexture("assets/copper/displacement.png"), loadTexture("assets/copper/ambient.png"), Materials::Copper },
+        { loadTexture("assets/gold/diffuse.png"), loadTexture("assets/gold/specular.png"), loadTexture("assets/gold/normal.png"), 
+        loadTexture("assets/gold/displacement.png"), loadTexture("assets/gold/ambient.png"), Materials::Gold },
+        { loadTexture("assets/silver/diffuse.png"), loadTexture("assets/silver/specular.png"), loadTexture("assets/silver/normal.png"), 
+        loadTexture("assets/silver/displacement.png"), loadTexture("assets/silver/ambient.png"), Materials::Silver },
+        { loadTexture("assets/diamond/diffuse.png"), loadTexture("assets/diamond/specular.png"), loadTexture("assets/diamond/normal.png"), 
+        loadTexture("assets/diamond/displacement.png"), loadTexture("assets/diamond/ambient.png"), Materials::Diamond },
+        { loadTexture("assets/glass/diffuse.png"), loadTexture("assets/glass/specular.png"), loadTexture("assets/glass/normal.png"), 
+        loadTexture("assets/glass/displacement.png"), loadTexture("assets/glass/ambient.png"), Materials::Glass },
+        { loadTexture("assets/crate/diffuse.png"), loadTexture("assets/crate/specular.png"), loadTexture("assets/crate/normal.png"), 
+        loadTexture("assets/crate/displacement.png"), loadTexture("assets/crate/ambient.png"), Materials::Bronze }
     };
 
-    const int blockTexture[] = { -1, 0, 1, 2, 3 };
+    const int blockTexture[] = { -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
     unsigned int cubemapTexture = loadCubemap(skyboxFaces);
 
@@ -499,7 +508,7 @@ int main()
         lightingShader.setFloat("heightScale", 0.025f);
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
 
-        for (unsigned int type = PEPE; type <= ICE; type++)
+        for (unsigned int type = PEPE; type <= CRATE; type++)
         {
             const VoxelBatch &batch = voxelBatches[type];
             if (batch.count == 0 || blockTexture[type] < 0)

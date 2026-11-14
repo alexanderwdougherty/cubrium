@@ -72,4 +72,9 @@ Currently not supported.
 * **[Emerald](assets/emerald/diffuse.png)** by Mojang Studios.
 * **[Obsidian](assets/obsidian/diffuse.png)** by Mojang Studios.
 * **[Ice](assets/ice/diffuse.png)** by Mojang Studios.
+* **[Copper](assets/copper/diffuse.png)** by Mojang Studios.
+* **[Gold](assets/gold/diffuse.png)** by Mojang Studios.
+* **[Silver/Iron](assets/silver/diffuse.png)** by Mojang Studios.
+* **[Diamond](assets/diamond/diffuse.png)** by Mojang Studios.
+* **[Glass](assets/glass/diffuse.png)** by Mojang Studios.
 * **[Pepe](assets/pepe/diffuse.png)** - Creator Unknown.
