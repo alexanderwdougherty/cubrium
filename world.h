@@ -167,16 +167,87 @@ struct IVec3Hash { // Really Cool Hash Function that uses large prime numbers to
     }
 };
 
+class PerlinNoise
+{
+    public:
+        PerlinNoise(uint32_t seed = 0)
+        {
+            p.resize(256);
+            std::iota(p.begin(), p.end(), 0);
+            std::mt19937 engine(seed); // THE (4-Byte) MERSENNE TWISTER
+            std::shuffle(p.begin(), p.end(), engine);
+            p.insert(p.end(), p.begin(), p.end());
+        }
+
+        double noise(double x, double y) const
+        {
+            int cellX = static_cast<int>(std::floor(x)) & 255, cellY = static_cast<int>(std::floor(y)) & 255;
+            double localX = x - std::floor(x), localY = y - std::floor(y);
+
+            int a = p[cellX] + cellY, b = p[cellX + 1] + cellY;
+
+            return lerp(fade(localY),
+                lerp(fade(localX), grad(p[a], localX, localY), grad(p[b], localX - 1.0, localY)),
+                lerp(fade(localX), grad(p[a + 1], localX, localY - 1.0), grad(p[b + 1], localX - 1.0, localY - 1.0))
+            );
+        }
+
+        double octaveNoise(double x, double y, int octaves, double persistence = 0.5) const
+        {
+            double total = 0.0, frequency = 1.0, amplitude = 1.0, max = 0.0;
+
+            for (int i = 0; i < octaves; i++)
+            {
+                total += noise(x * frequency, y * frequency) * amplitude;
+                max += amplitude;
+                amplitude *= persistence;
+                frequency *= 2.0;
+            }
+
+            return total / max;
+        }
+    
+    private:
+        std::vector<int> p;
+        static double fade(double t)
+        { 
+            return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+        }
+        
+        static double lerp(double weight, double start, double end)
+        {
+            return start + weight * (end - start);
+        }
+
+        static double grad(int hash, double x, double y)
+        {
+            int h = hash & 7; // 8 Semi-Random Gradient Vectors
+            double gradientX, gradientY;
+
+            if (h < 4)
+                gradientX = 1.0, gradientY = 2.0;
+            else
+                gradientX = 2.0, gradientY = 1.0;
+
+            if ((h & 1) != 0)
+                gradientX = -gradientX;
+            if ((h & 2) != 0)
+                gradientY = -gradientY;
+
+            return (gradientX * x) + (gradientY * y);
+        }
+};
+
 class World
 {
     public:
         std::unordered_map<glm::ivec3, Chunk*, IVec3Hash> chunks;
         int renderDistance;
+        uint32_t seed;
+        PerlinNoise perlin;
 
-        World(int renderDist = 8)
-        {
-            renderDistance = renderDist;
-        }
+        World(int renderDist = 8, uint32_t worldSeed = 123454321)
+            : renderDistance(renderDist), seed(worldSeed), perlin(worldSeed) {}
 
         ~World()
         {
@@ -188,12 +259,33 @@ class World
 
         void generateTerrain(Chunk* chunk)
         {
-            if (chunk -> chunkPos.y != 0)
+            const float frequency = 0.02f;
+            const int averageHeight = 8, max = 16;
+
+            if (chunk -> chunkPos.y * CHUNK_SIZE > averageHeight + max)
                 return;
 
             for (int x = 0; x < CHUNK_SIZE; x++)
                 for (int z = 0; z < CHUNK_SIZE; z++)
-                    chunk -> set(x, 0, z, OBSIDIAN);
+                {
+                    int worldX = chunk -> chunkPos.x * CHUNK_SIZE + x, worldZ = chunk -> chunkPos.z * CHUNK_SIZE + z;
+                    double noiseValue = perlin.octaveNoise(worldX * frequency, worldZ * frequency, 4, 0.5);
+                    int surfaceY = averageHeight + (int)std::round(noiseValue * max);
+
+                    for (int y = 0; y < CHUNK_SIZE; y++)
+                    {
+                        int worldY = chunk -> chunkPos.y * CHUNK_SIZE + y;
+                        if (worldY > surfaceY)
+                            continue;
+                        
+                        if (worldY == surfaceY)
+                            chunk -> set(x, y, z, OBSIDIAN);
+                        else if (worldY > surfaceY - 4)
+                            chunk -> set(x, y, z, COPPER);
+                        else
+                            chunk -> set(x, y, z, SILVER);
+                    }
+                }
         }
 
         void update(glm::vec3 camPos, unsigned int cubeVBO, GLsizei stride)

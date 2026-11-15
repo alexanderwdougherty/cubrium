@@ -33,7 +33,7 @@ const unsigned int SCREEN_WIDTH = 1000, SCREEN_HEIGHT = 1000;
 int windowWidth = SCREEN_WIDTH, windowHeight = SCREEN_HEIGHT;
 bool framebufferResized = false;
 
-Camera camera(glm::vec3(0.0f, 5.0f, 0.0f));
+Camera camera(glm::vec3(0.0f, 32.0f, 0.0f));
 float lastX = SCREEN_WIDTH / 2.0f, lastY = SCREEN_HEIGHT / 2.0f;
 bool firstMouse = true;
 
@@ -253,7 +253,7 @@ int main()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
-    World world(8);
+    World world(4, 12345);
 
     std::vector<std::string> skyboxFaces = {
         "assets/skybox/right.jpg",
