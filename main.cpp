@@ -17,6 +17,7 @@
 
 # include <iostream>
 # include <cmath>
+# include <cstring>
 
 # include <map>
 # include <vector>
@@ -27,6 +28,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char *path);
 unsigned int loadCubemap(std::vector<std::string> faces);
+unsigned int createBlockTextureArray(const std::vector<std::string>& paths, int texSize);
 std::vector<float> buildVertexData(const float* v, size_t vertexCount);
 
 const unsigned int SCREEN_WIDTH = 1000, SCREEN_HEIGHT = 1000;
@@ -293,10 +295,15 @@ int main()
         { loadTexture("assets/crate/diffuse.png"), loadTexture("assets/crate/specular.png"), loadTexture("assets/crate/normal.png"), 
         loadTexture("assets/crate/displacement.png"), loadTexture("assets/crate/ambient.png"), Materials::Bronze }
     };
+    std::vector<std::string> diffusePaths = {
+        "assets/pepe/diffuse.png", "assets/emerald/diffuse.png", "assets/obsidian/diffuse.png", "assets/ice/diffuse.png", "assets/copper/diffuse.png",
+        "assets/gold/diffuse.png", "assets/silver/diffuse.png", "assets/diamond/diffuse.png", "assets/glass/diffuse.png", "assets/crate/diffuse.png"
+    };
 
     const int blockTexture[] = { -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-
+    
     unsigned int cubemapTexture = loadCubemap(skyboxFaces);
+    unsigned int blockTextureArray = createBlockTextureArray(diffusePaths, 64);
 
     lightingShader.use();
     lightingShader.setInt("material.diffuse", 0);
@@ -305,12 +312,15 @@ int main()
     lightingShader.setInt("material.displacementMap", 3);
     lightingShader.setInt("material.ambientMap", 4);
     lightingShader.setInt("skybox", 5);
+    lightingShader.setInt("voxelGrid", 6);
+    lightingShader.setInt("voxelGridSize", world.voxelGridSize);
+    lightingShader.setInt("blockTextures", 7);
 
     skyboxShader.use();
     skyboxShader.setInt("skybox", 5);
 
     screenShader.use();
-    screenShader.setInt("screenTex", 6);
+    screenShader.setInt("screenTex", 8);
 
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
@@ -355,8 +365,6 @@ int main()
             framebufferResized = false;
         }
 
-        world.update(camera.Position, VBO, stride);
-
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
@@ -368,6 +376,15 @@ int main()
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         
         lightingShader.use();
+
+        world.update(camera.Position, VBO, stride);
+
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_3D, world.voxelTex3D);
+        glUniform3iv(glGetUniformLocation(lightingShader.ID, "voxelGridOrigin"), 1, glm::value_ptr(world.voxelGridOrigin));
+
+        glActiveTexture(GL_TEXTURE7);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, blockTextureArray);
         
         lightingShader.setBool("drawSingleColor", false);
 
@@ -619,7 +636,7 @@ int main()
         screenShader.setInt("effectMode", effectMode);
 
         glBindVertexArray(quadVAO);
-        glActiveTexture(GL_TEXTURE6);
+        glActiveTexture(GL_TEXTURE8);
 
         glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -655,6 +672,7 @@ int main()
     glDeleteTextures(1, &windowDisplacement);
     glDeleteTextures(1, &windowAmbient);
     glDeleteTextures(1, &cubemapTexture);
+    glDeleteTextures(1, &blockTextureArray);
 
     glDeleteProgram(lightingShader.ID);
     glDeleteProgram(lightCubeShader.ID);
@@ -746,7 +764,7 @@ unsigned int loadTexture(char const * path)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_NEAREST, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     }
     else {
         std::cout << "Failed to load at path: " << path << std::endl;
@@ -793,6 +811,49 @@ unsigned int loadCubemap(std::vector<std::string> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     return textureID;
+}
+
+unsigned int createBlockTextureArray(const std::vector<std::string>& paths, int texSize)
+{
+    unsigned int texArray;
+    glGenTextures(1, &texArray);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
+
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, texSize, texSize, static_cast<GLsizei>(paths.size()) + 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    stbi_set_flip_vertically_on_load(true);
+
+    for (size_t i = 0; i < paths.size(); i++)
+    {
+        int width, height, channels;
+
+        unsigned char* data = stbi_load(paths[i].c_str(), &width, &height, &channels, 4);
+        if (!data)
+        {
+            std::cout << "Texture Array failed to load: " << paths[i] << std::endl;
+            continue;
+        }
+
+        std::vector<unsigned char> resized(texSize * texSize * 4);
+        for (int x = 0; x < texSize; x++)
+            for (int y = 0; y < texSize; y++)
+            {
+                int srcX = (x * width) / texSize, srcY = (y * height) / texSize;
+                std::memcpy(&resized[(y * texSize + x) * 4], &data[(srcY * width + srcX) * 4], 4);
+            }
+
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, static_cast<GLint>(i + 1), texSize, texSize, 1, GL_RGBA, GL_UNSIGNED_BYTE, resized.data());
+
+        stbi_image_free(data);
+    }
+
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    return texArray;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)

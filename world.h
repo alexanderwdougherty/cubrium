@@ -12,6 +12,7 @@
 # include <memory>
 # include <cstdint> // 1-Byte Storage for Optimization (I saw it in a video ~a year ago)
 # include <cmath>
+# include <climits>
 # include <algorithm>
 # include <numeric>
 # include <random>
@@ -242,12 +243,15 @@ class World
 {
     public:
         std::unordered_map<glm::ivec3, Chunk*, IVec3Hash> chunks;
-        int renderDistance;
+        int renderDistance, voxelGridSize;
         uint32_t seed;
         PerlinNoise perlin;
 
+        unsigned int voxelTex3D = 0;
+        glm::ivec3 voxelGridOrigin = glm::ivec3(0), lastVoxelCamChunk = glm::ivec3(INT_MAX);
+
         World(int renderDist = 8, uint32_t worldSeed = 123454321)
-            : renderDistance(renderDist), seed(worldSeed), perlin(worldSeed) {}
+            : renderDistance(renderDist), voxelGridSize((renderDist * 2 + 1) * CHUNK_SIZE), seed(worldSeed), perlin(worldSeed) {}
 
         ~World()
         {
@@ -255,6 +259,61 @@ class World
                 delete pair.second;
 
             chunks.clear();
+
+            if (voxelTex3D != 0)
+                glDeleteTextures(1, &voxelTex3D);
+        }
+
+        void initVoxelTexture()
+        {
+            glGenTextures(1, &voxelTex3D);
+            glBindTexture(GL_TEXTURE_3D, voxelTex3D);
+
+            glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, voxelGridSize, voxelGridSize, voxelGridSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
+
+            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        }
+
+        void updateVoxelTexture(glm::ivec3 camChunk)
+        {
+            if (voxelTex3D == 0)
+                initVoxelTexture();
+            if (camChunk == lastVoxelCamChunk)
+                return;
+            
+            lastVoxelCamChunk = camChunk;
+
+            voxelGridOrigin = (camChunk - glm::ivec3(renderDistance)) * CHUNK_SIZE;
+            std::vector<uint8_t> volume(voxelGridSize * voxelGridSize * voxelGridSize, AIR);
+
+            for (int cx = -renderDistance; cx <= renderDistance; cx++ )
+                for (int cy = -renderDistance; cy <= renderDistance; cy++)
+                    for (int cz = -renderDistance; cz <= renderDistance; cz++)
+                    {
+                        auto i = chunks.find(camChunk + glm::ivec3(cx, cy, cz));
+                        if (i == chunks.end())
+                            continue;
+                        
+                        int baseX = (cx + renderDistance) * CHUNK_SIZE, baseY = (cy + renderDistance) * CHUNK_SIZE, baseZ = (cz + renderDistance) * CHUNK_SIZE;
+
+                        for (int x = 0; x < CHUNK_SIZE; x++)
+                            for (int y = 0; y < CHUNK_SIZE; y++)
+                                for (int z = 0; z < CHUNK_SIZE; z++)
+                                {
+                                    uint8_t block = i -> second -> get(x, y, z);
+                                    if (block == AIR)
+                                        continue;
+                                    volume[(baseX + x) + (baseY + y) * voxelGridSize + (baseZ + z) * voxelGridSize * voxelGridSize] = block;
+                                }
+                    }
+
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glBindTexture(GL_TEXTURE_3D, voxelTex3D);
+            glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, voxelGridSize, voxelGridSize, voxelGridSize, GL_RED_INTEGER, GL_UNSIGNED_BYTE, volume.data());
         }
 
         void generateTerrain(Chunk* chunk)
@@ -328,6 +387,8 @@ class World
                     i++;
                 }
             }
+
+            updateVoxelTexture(camChunk);
         }
 };
 

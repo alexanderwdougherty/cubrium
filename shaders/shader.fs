@@ -65,6 +65,11 @@ uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform samplerCube skybox;
 
+uniform usampler3D voxelGrid;
+uniform ivec3 voxelGridOrigin;
+uniform int voxelGridSize;
+uniform sampler2DArray blockTextures;
+
 uniform bool drawSingleColor;
 uniform vec3 singleColor;
 
@@ -115,6 +120,87 @@ vec2 ParallaxMapping(vec2 uv, vec3 viewDirTS)
     return prevUV * weight + currentUV * (1.0 - weight);
 }
 
+vec3 TraceVoxelRay(vec3 worldOrigin, vec3 rayDir)
+{
+    vec3 gridPos = (worldOrigin + vec3(0.5)) - vec3(voxelGridOrigin);
+    ivec3 voxel = ivec3(floor(gridPos));
+
+    ivec3 stepDir = ivec3(sign(rayDir));
+    vec3 tDelta = 1.0 / max(abs(rayDir), vec3(1e-5)); // Epsilon Safety Guard
+
+    vec3 nextBoundary = vec3(voxel) + max(vec3(stepDir), vec3(0.0));
+    vec3 tMax = abs(nextBoundary - gridPos) * tDelta;
+
+    vec3 hitNormal = vec3(0.0, 1.0, 0.0);
+    float tHit = 0.0;
+    const int MAX_STEPS = 128;
+
+    for (int i = 0; i < MAX_STEPS; i++)
+    {
+        if (any(lessThan(voxel, ivec3(0))) || any(greaterThanEqual(voxel, ivec3(voxelGridSize))))
+            break;
+
+        uint blockID = texelFetch(voxelGrid, voxel, 0).r;
+        if (blockID != 0u)
+        {
+            vec3 hitPos = gridPos + rayDir * tHit;
+            vec2 hitUV;
+
+            if (abs(hitNormal.x) > 0.5)
+                hitUV = fract(hitPos.zy);
+            else if (abs(hitNormal.y) > 0.5)
+                hitUV = fract(hitPos.xz);
+            else
+                hitUV = fract(hitPos.xy);
+
+            vec3 texColor = texture(blockTextures, vec3(hitUV, float(blockID))).rgb;
+
+            float diff = max(dot(hitNormal, normalize(-dirLight.direction)), 0.0);
+            vec3 litColor = texColor * (dirLight.ambient * 2.5 + dirLight.diffuse * diff * 1.5);
+
+            float fade = clamp(float(i) / float(MAX_STEPS), 0.0, 1.0);
+            return mix(litColor, texture(skybox, rayDir).rgb, fade * 0.35);
+        }
+
+        if (tMax.x < tMax.y)
+        {
+            if (tMax.x < tMax.z)
+            {
+                tHit = tMax.x;
+                voxel.x += stepDir.x;
+                tMax.x += tDelta.x;
+                hitNormal = vec3(-stepDir.x, 0.0, 0.0);
+            }
+            else
+            {
+                tHit = tMax.z;
+                voxel.z += stepDir.z;
+                tMax.z += tDelta.z;
+                hitNormal = vec3(0.0, 0.0, -stepDir.z);
+            }
+        }
+        else
+        {
+            if (tMax.y < tMax.z)
+            {
+                tHit = tMax.y;
+                voxel.y += stepDir.y;
+                tMax.y += tDelta.y;
+                hitNormal = vec3(0.0, -stepDir.y, 0.0);
+            }
+            else
+            {
+                tHit = tMax.z;
+                voxel.z += stepDir.z;
+                tMax.z += tDelta.z;
+                hitNormal = vec3(0.0, 0.0, -stepDir.z);
+            }
+        }
+    }
+
+    return texture(skybox, rayDir).rgb;
+}
+
 void main()
 {
     if (drawSingleColor)
@@ -153,7 +239,10 @@ void main()
     {
         vec3 I = -viewDir;
         vec3 R = (material.refractiveIndex > 0.0) ? refract(I, norm, 1.0 / material.refractiveIndex) : reflect(I, norm);
-        result = mix(result, texture(skybox, R).rgb, material.reflectivity);
+
+        vec3 rayOrigin = FragPos + Normal * ((material.refractiveIndex > 0.0) ? -0.05 : 0.02);
+        vec3 reflectedColor = TraceVoxelRay(rayOrigin, normalize(R));
+        result = mix(result, reflectedColor, material.reflectivity);
     }
 
     FragColor = vec4(result, texColor.a);
