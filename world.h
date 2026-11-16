@@ -338,7 +338,7 @@ class World
                             continue;
                         
                         if (worldY == surfaceY)
-                            chunk -> set(x, y, z, OBSIDIAN);
+                            chunk -> set(x, y, z, EMERALD);
                         else if (worldY > surfaceY - 4)
                             chunk -> set(x, y, z, COPPER);
                         else

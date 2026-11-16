@@ -120,7 +120,7 @@ vec2 ParallaxMapping(vec2 uv, vec3 viewDirTS)
     return prevUV * weight + currentUV * (1.0 - weight);
 }
 
-vec3 TraceVoxelRay(vec3 worldOrigin, vec3 rayDir)
+vec3 TraceVoxelRay(vec3 worldOrigin, vec3 rayDir, bool startsIn)
 {
     vec3 gridPos = (worldOrigin + vec3(0.5)) - vec3(voxelGridOrigin);
     ivec3 voxel = ivec3(floor(gridPos));
@@ -141,7 +141,8 @@ vec3 TraceVoxelRay(vec3 worldOrigin, vec3 rayDir)
             break;
 
         uint blockID = texelFetch(voxelGrid, voxel, 0).r;
-        if (blockID != 0u)
+        bool ignoreCell = (startsIn && i == 0);
+        if (blockID != 0u && !ignoreCell)
         {
             vec3 hitPos = gridPos + rayDir * tHit;
             vec2 hitUV;
@@ -153,10 +154,11 @@ vec3 TraceVoxelRay(vec3 worldOrigin, vec3 rayDir)
             else
                 hitUV = fract(hitPos.xy);
 
-            vec3 texColor = texture(blockTextures, vec3(hitUV, float(blockID))).rgb;
+            float lod = clamp(log2(1.0 + tHit * 0.1), 0.0, 4.0);
+            vec3 texColor = textureLod(blockTextures, vec3(hitUV, float(blockID)), lod).rgb;
 
             float diff = max(dot(hitNormal, normalize(-dirLight.direction)), 0.0);
-            vec3 litColor = texColor * (dirLight.ambient * 2.5 + dirLight.diffuse * diff * 1.5);
+            vec3 litColor = texColor * max((dirLight.ambient * 2.5 + dirLight.diffuse * diff * 1.5), vec3(0.25));
 
             float fade = clamp(float(i) / float(MAX_STEPS), 0.0, 1.0);
             return mix(litColor, texture(skybox, rayDir).rgb, fade * 0.35);
@@ -238,10 +240,16 @@ void main()
     if (material.reflectivity > 0.0)
     {
         vec3 I = -viewDir;
+        vec3 normN = normalize(Normal);
         vec3 R = (material.refractiveIndex > 0.0) ? refract(I, norm, 1.0 / material.refractiveIndex) : reflect(I, norm);
 
-        vec3 rayOrigin = FragPos + Normal * ((material.refractiveIndex > 0.0) ? -0.05 : 0.02);
-        vec3 reflectedColor = TraceVoxelRay(rayOrigin, normalize(R));
+        if (dot(R, R) < 1e-5)
+            R = reflect(I, norm);
+        else if (!(material.refractiveIndex > 0.0) && dot(R, normN) < 0.0)
+            R = reflect(R, normN);
+
+        vec3 rayOrigin = FragPos + normN * ((material.refractiveIndex > 0.0) ? -0.05 : 0.05);
+        vec3 reflectedColor = TraceVoxelRay(rayOrigin, normalize(R), material.refractiveIndex > 0.0);
         result = mix(result, reflectedColor, material.reflectivity);
     }
 

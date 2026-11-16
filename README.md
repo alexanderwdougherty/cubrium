@@ -36,12 +36,12 @@ ldd main
 2. Open the terminal and extract the downloaded `.zip` file:
 
     ```bash
-    unzip opengl-learn-v0.0.3-linux.zip -d opengl-learn
+    unzip cubrium-v0.0.4-linux.zip -d Cubrium
     ```
 3. Navigate to the new folder:
 
     ```bash
-    cd opengl-learn
+    cd Cubrium
     ```
 4. Ensure the binary has executable permissions:
 
